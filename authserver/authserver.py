@@ -62,7 +62,7 @@ def key_id(priv_key_pem):
     return buf.rstrip(':')
 
 
-def allowed_actions(request):
+def grant_access(request):
     """Produces a list of allowed actions, one for each access right
     requested in the request's `scope` header."""
     request_params = dict(request.args)
@@ -97,13 +97,18 @@ def auth():
         # Docker registry expects a key id ('kid') header to include an
         # encoded version of the public key used to check the signature.
         keyid = key_id(SIGNKEY)
-        authorized_actions = []
+        
+        granted_actions = None
+        if 'scope' in request_params:
+            # request to perform an action against registry
+            granted_actions = grant_access(request)        
+        
         signed_token = jwt.encode(
             {'iss': 'Elastisys',
              'aud': request_params['service'][0],
              'nbf': datetime.datetime.utcnow(),
              'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24),
-             'access': allowed_actions(request)
+             'access': granted_actions 
             }, SIGNKEY,
             algorithm='RS256',
             headers={'kid': keyid})
