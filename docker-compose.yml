@@ -1,0 +1,21 @@
+registry:
+  restart: always
+  image: registry:2
+  ports:
+    - 5000:5000
+  environment:
+    # For details on how to set configuration parameters:
+    #   https://github.com/docker/distribution/blob/master/docs/configuration.md
+    REGISTRY_HTTP_TLS_CERTIFICATE: /certs/myregistry.crt
+    REGISTRY_HTTP_TLS_KEY: /certs/myregistry.key
+    REGISTRY_AUTH: token
+    REGISTRY_AUTH_TOKEN_REALM: https://${HOSTNAME}:8443/api/auth
+    REGISTRY_AUTH_TOKEN_SERVICE: localhost
+    REGISTRY_AUTH_TOKEN_ISSUER: Elastisys
+    REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: /certs/authserver.crt
+  volumes:
+    # Registry host cert and auth server certificates
+    - ${PWD}/certs:/certs
+    # Registry storage directory
+    - ${PWD}/registry-storage:/var/lib/registry
+

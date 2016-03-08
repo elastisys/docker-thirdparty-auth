@@ -1,0 +1,4 @@
+flask==0.10.0
+pyjwt==1.4.0
+pycrypto==2.6.1
+cryptography==1.2.3
