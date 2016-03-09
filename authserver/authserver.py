@@ -88,10 +88,10 @@ def auth():
     LOG.debug("auth called: %s", request_params)
     LOG.debug("headers: %s", request.headers)
     if not 'Authorization' in request.headers:
-        return response(400, {'error': 'basic auth required'})
+        return response(401, {'error': 'basic auth required'})
     auth_header = re.match(r'Basic (\S+)', request.headers['Authorization'])
     if not auth_header:
-        return response(400, {'error': 'malformed Authorization header'})
+        return response(401, {'error': 'malformed Authorization header'})
     user, password = base64.b64decode(auth_header.group(1)).split(':')
     if user in AUTH_STORE and AUTH_STORE[user] == password:
         # Docker registry expects a key id ('kid') header to include an
