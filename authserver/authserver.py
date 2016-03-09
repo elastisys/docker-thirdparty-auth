@@ -62,10 +62,9 @@ def key_id(priv_key_pem):
     return buf.rstrip(':')
 
 
-def grant_access(request):
+def grant_access(request_params):
     """Produces a list of allowed actions, one for each access right
-    requested in the request's `scope` header."""
-    request_params = dict(request.args)
+    requested by a `scope` parameter."""
     allowed_actions = []
     for requested_permissions in request_params['scope']:
             # Each permission of form [u'repository:my/image:push,pull']
@@ -77,6 +76,26 @@ def grant_access(request):
                 'actions': actions
             })
     return allowed_actions
+
+
+def token_claims(request_params):
+    """Produce auth token claim set for an authenticated user."""
+    claims = {
+        'iss': 'Elastisys',
+        'nbf': datetime.datetime.utcnow(),
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    }
+
+    if 'service' in request_params:
+        # client will use the token with a given service
+        claims['aud'] = request_params['service'][0]
+        
+    if 'scope' in request_params:
+        # client request to perform an action against registry
+        LOG.debug('client requesting access: %s', request_params['scope'])
+        claims['access'] = grant_access(request_params)
+        
+    return claims
 
 
 @app.route('/api/auth')
@@ -96,22 +115,9 @@ def auth():
     if user in AUTH_STORE and AUTH_STORE[user] == password:
         # Docker registry expects a key id ('kid') header to include an
         # encoded version of the public key used to check the signature.
-        keyid = key_id(SIGNKEY)
-        
-        granted_actions = None
-        if 'scope' in request_params:
-            # client request to perform an action against registry
-            LOG.debug('client requesting access: %s', request_params['scope'])
-            granted_actions = grant_access(request)        
-        
+        keyid = key_id(SIGNKEY)        
         signed_token = jwt.encode(
-            {'iss': 'Elastisys',
-             'aud': request_params['service'][0],
-             'nbf': datetime.datetime.utcnow(),
-             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24),
-             'access': granted_actions 
-            }, SIGNKEY,
-            algorithm='RS256',
+            token_claims(request_params), SIGNKEY, algorithm='RS256',
             headers={'kid': keyid})
         LOG.debug("key id: '%s'" % keyid)
         LOG.debug("responding with token: %s" % signed_token)
