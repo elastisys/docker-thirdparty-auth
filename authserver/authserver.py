@@ -100,7 +100,8 @@ def auth():
         
         granted_actions = None
         if 'scope' in request_params:
-            # request to perform an action against registry
+            # client request to perform an action against registry
+            LOG.debug('client requesting access: %s', request_params['scope'])
             granted_actions = grant_access(request)        
         
         signed_token = jwt.encode(
